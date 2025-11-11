@@ -1,81 +1,120 @@
+
 import streamlit as st
 import pandas as pd
-
-# Sample Indian food data for disease conditions
-data = {
-    'Food': [
-        'Moong Dal Chilla', 'Oats Upma', 'Palak (Spinach) Sabzi', 'Chana Salad',
-        'Dahi (Curd)', 'Brown Rice Pulao', 'Roti (Whole Wheat)', 'Bhindi (Okra) Curry',
-        'Grilled Tandoori Chicken', 'Mixed Vegetable Curry', 'Rajma (Kidney Beans) Curry'
-    ],
-    'Suitable_for': [
-        'Diabetes, Heart Disease', 'Diabetes, Hypertension', 'Heart Disease, Hypertension',
-        'Diabetes, Heart Disease', 'Diabetes, Heart Disease, Hypertension',
-        'Diabetes, Heart Disease', 'Diabetes, Heart Disease, Hypertension',
-        'Heart Disease, Hypertension', 'Heart Disease', 'Hypertension, Heart Disease', 'Diabetes, Hypertension'
-    ]
-}
-df = pd.DataFrame(data)
-
-# Streamlit ui
-st.title("Disease-Based Indian Food Recommendation System")
-
-diseases = ['Diabetes', 'Heart Disease', 'Hypertension', 'None']
-selected_disease = st.selectbox("Select your disease/condition", diseases)
-
-if selected_disease != 'None':
-    st.subheader(f"Recommended Indian Foods for {selected_disease}:")
-    filtered = df[df['Suitable_for'].str.contains(selected_disease)]
-    st.table(filtered[['Food']])
-else:
-    st.subheader("Recommended Healthy Indian Foods:")
-    st.table(df[['Food']])
-# app.py
-import base64
 from pathlib import Path
+from rapidfuzz import process, fuzz
 
-# 1) Point to the attached image path (save the file into your repo/app folder)
-BG_PATH = Path("backround-image.jpeg")  # exact filename from the attachment
+st.set_page_config(page_title="Food Recommendation for Disease", layout="centered")
 
-def set_background(image_path: Path):
-    if not image_path.exists():
-        st.error(f"Background image not found: {image_path.resolve()}")
-        return
+st.title("🍎 Food Recommendation for Disease")
+st.markdown("An educational tool that recommends foods to eat and avoid for common diseases. **Not medical advice.**")
 
-    ext = image_path.suffix.lstrip(".").lower() or "jpeg"
-    with open(image_path, "rb") as f:
-        encoded = base64.b64encode(f.read()).decode()
+@st.cache_data
+def load_data(path="food_dataset.csv"):
+    df = pd.read_csv(path)
+    df["Disease_lower"] = df["Disease"].str.lower()
+    return df
 
-    css = f"""
-    <style>
-    .stApp {{
-        background-image: url("data:image/{ext};base64,{encoded}");
-        background-size: cover;
-        background-repeat: no-repeat;
-        background-position: center center;
-        background-attachment: fixed;
-    }}
-    /* Optional readability overlays */
-    [data-testid="stAppViewContainer"] > .main {{
-        background: rgba(255,255,255,0.72);
-        backdrop-filter: blur(2px);
-    }}
-    [data-testid="stSidebar"] {{
-        background: rgba(255,255,255,0.85);
-        backdrop-filter: blur(2px);
-    }}
-    [data-testid="stHeader"] {{
-        background: rgba(255,255,255,0.60);
-    }}
-    </style>
-    """
-    st.markdown(css, unsafe_allow_html=True)
+df = load_data("food_dataset.csv")
+diseases = df["Disease"].tolist()
 
-# Call this before building the UI
-set_background(BG_PATH)
+with st.sidebar:
+    st.header("Controls")
+    use_fuzzy = st.checkbox("Enable fuzzy search (tolerate typos)", value=True)
+    pref_veg = st.checkbox("Vegetarian-friendly results", value=False)
+    pref_lowsugar = st.checkbox("Low-sugar preference (hide sugary foods)", value=False)
+    pref_lowsodium = st.checkbox("Low-sodium preference (hide high-salt foods)", value=False)
+    st.markdown("---")
+    st.markdown("**Data management**")
+    uploaded = st.file_uploader("Upload CSV to replace dataset", type=["csv"])
+    if uploaded is not None:
+        try:
+            newdf = pd.read_csv(uploaded)
+            st.session_state["uploaded_df"] = newdf
+            st.success("CSV uploaded — use 'Save dataset' below to download the updated CSV.")
+        except Exception as e:
+            st.error(f"Failed to read CSV: {e}")
+    if st.button("Save dataset (download updated CSV)"):
+        outcsv = df.drop(columns=["Disease_lower"]).to_csv(index=False)
+        st.download_button("Download CSV", data=outcsv, file_name="food_dataset_updated.csv", mime="text/csv")
 
-st.title("Disease-Based Indian Food Recommendation")
-st.write("Background set from local file: backround-image.jpeg")
+st.write("**Search for a disease:**")
+col1, col2 = st.columns([3,1])
+with col1:
+    query = st.text_input("Type disease name (or pick from dropdown)", value="")
+with col2:
+    selected = st.selectbox("Or choose", ["-- none --"] + diseases)
+
+def simple_filter_text(text):
+    # naive patterns for non-veg and sugary/salty words
+    txt = str(text).lower()
+    return txt
+
+def apply_preferences(text, veg=False, lowsugar=False, lowsodium=False):
+    txt = str(text)
+    lowered = txt.lower()
+    # vegetarian: remove animal items (naive)
+    if veg:
+        blacklist = ["chicken","fish","meat","egg","eggs","salmon","tuna","beef","pork","shellfish"]
+        for b in blacklist:
+            lowered = lowered.replace(b, "[removed]")
+    if lowsugar:
+        sugar_words = ["sugar","sugary","sweets","honey","jaggery","syrup"]
+        for s in sugar_words:
+            lowered = lowered.replace(s, "[removed]")
+    if lowsodium:
+        salt_words = ["salt","salty","pickles","processed","chips"]
+        for s in salt_words:
+            lowered = lowered.replace(s, "[removed]")
+    # return cleaned version keeping original casing for words not removed
+    return lowered.replace("[removed]","(removed due to preference)")
+
+def find_matches(query, df, use_fuzzy=True, limit=5):
+    q = query.strip().lower()
+    if not q:
+        return pd.DataFrame()
+    if use_fuzzy:
+        choices = df["Disease"].tolist()
+        results = process.extract(q, choices, scorer=fuzz.token_sort_ratio, limit=limit)
+        matches = [r[0] for r in results if r[1] > 50]  # threshold
+        return df[df["Disease"].isin(matches)]
+    else:
+        return df[df["Disease_lower"].str.contains(q)]
+
+results_df = pd.DataFrame()
+if selected != "-- none --":
+    results_df = df[df["Disease"] == selected]
+elif query.strip():
+    results_df = find_matches(query, df, use_fuzzy=use_fuzzy, limit=10)
+
+if results_df.empty:
+    st.info("No disease selected. Choose from dropdown or type a name to search.")
+else:
+    for _, row in results_df.iterrows():
+        st.header(row["Disease"])
+        eat = apply_preferences(row["Foods_to_Eat"], veg=pref_veg, lowsugar=pref_lowsugar, lowsodium=pref_lowsodium)
+        avoid = apply_preferences(row["Foods_to_Avoid"], veg=pref_veg, lowsugar=pref_lowsugar, lowsodium=pref_lowsodium)
+        note = row.get("Nutritional_Note","")
+        st.subheader("Foods to Eat ✅")
+        for item in str(eat).split(";"):
+            item = item.strip()
+            if item:
+                st.markdown(f"- {item}")
+        st.subheader("Foods to Avoid ⛔")
+        for item in str(avoid).split(";"):
+            item = item.strip()
+            if item:
+                st.markdown(f"- {item}")
+        if note:
+            st.subheader("Nutritional Note")
+            st.write(note)
+        st.markdown("---")
+
+with st.expander("Show full dataset"):
+    st.dataframe(df.drop(columns=["Disease_lower"]))
+
+st.caption("Built for educational purposes. Not medical advice.")
+
 
 
 
