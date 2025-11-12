@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-from pathlib import Path
 from rapidfuzz import process, fuzz
 
 st.set_page_config(page_title="Food Recommendation for Disease", layout="centered")
@@ -8,43 +7,52 @@ st.set_page_config(page_title="Food Recommendation for Disease", layout="centere
 st.title("🍎 Food Recommendation for Disease")
 st.markdown("An educational tool that recommends foods to eat and avoid for common diseases. *Not medical advice.*")
 
-# ✅ Your dataset path
-DATA_PATH = Path(r"C:\Users\prash\Downloads\food_dataset_updated.csv")
+# ✅ Embedded dataset
+data = [
+    {
+        "Disease": "Type 2 Diabetes",
+        "Foods_to_Eat": "Whole grains (brown rice, oats); Non-starchy vegetables (broccoli, spinach); Lean proteins (chicken, tofu, lentils); Nuts; Seeds; Low-fat dairy",
+        "Foods_to_Avoid": "Sugary drinks; White bread; Pastries; Sweets; Fried foods; Full-fat dairy",
+        "Nutritional_Note": "Aim for low-glycemic foods with high fiber to stabilize blood sugar."
+    },
+    {
+        "Disease": "Hypertension",
+        "Foods_to_Eat": "Fruits; Vegetables; Whole grains; Low-fat dairy; Potassium-rich foods",
+        "Foods_to_Avoid": "High-salt foods; Pickles; Processed meats; Chips; Fast food",
+        "Nutritional_Note": "Follow the DASH diet; reducing sodium and increasing potassium helps lower blood pressure."
+    },
+    {
+        "Disease": "Heart Disease / High Cholesterol",
+        "Foods_to_Eat": "Oats; Barley; Fatty fish (salmon, tuna); Legumes; Olive oil; Fruits; Vegetables",
+        "Foods_to_Avoid": "Butter; Cheese; Fried foods; Red meats; Processed snacks",
+        "Nutritional_Note": "Focus on soluble fiber and unsaturated fats to improve cholesterol levels."
+    },
+    {
+        "Disease": "Chronic Kidney Disease (CKD)",
+        "Foods_to_Eat": "Low-sodium meals; Lean proteins in moderation; Apples; Cabbage; Garlic; Olive oil",
+        "Foods_to_Avoid": "High-sodium foods; Processed snacks; Dark sodas; High-phosphorus foods",
+        "Nutritional_Note": "Control intake of sodium, potassium, and phosphorus to protect kidney function."
+    },
+    {
+        "Disease": "Fatty Liver (NAFLD)",
+        "Foods_to_Eat": "Vegetables; Fruits; Whole grains; Olive oil; Fatty fish; Green tea",
+        "Foods_to_Avoid": "Sugar-rich drinks; Refined carbs; Processed meats; Alcohol",
+        "Nutritional_Note": "Weight loss and high-antioxidant foods reduce fat buildup in the liver."
+    }
+]
 
-@st.cache_data
-def load_data(path):
-    df = pd.read_csv(path)
-    df["Disease_lower"] = df["Disease"].str.lower()
-    return df
-
-# Try to load the dataset from the provided path
-try:
-    df = load_data(DATA_PATH)
-except FileNotFoundError:
-    st.error(f"❌ Could not find dataset file at: {DATA_PATH}")
-    st.stop()
-
+# Create DataFrame
+df = pd.DataFrame(data)
+df["Disease_lower"] = df["Disease"].str.lower()
 diseases = df["Disease"].tolist()
 
+# Sidebar controls
 with st.sidebar:
     st.header("Controls")
     use_fuzzy = st.checkbox("Enable fuzzy search (tolerate typos)", value=True)
     pref_veg = st.checkbox("Vegetarian-friendly results", value=False)
     pref_lowsugar = st.checkbox("Low-sugar preference (hide sugary foods)", value=False)
     pref_lowsodium = st.checkbox("Low-sodium preference (hide high-salt foods)", value=False)
-    st.markdown("---")
-    st.markdown("*Data management*")
-    uploaded = st.file_uploader("Upload CSV to replace dataset", type=["csv"])
-    if uploaded is not None:
-        try:
-            newdf = pd.read_csv(uploaded)
-            st.session_state["uploaded_df"] = newdf
-            st.success("CSV uploaded — use 'Save dataset' below to download the updated CSV.")
-        except Exception as e:
-            st.error(f"Failed to read CSV: {e}")
-    if st.button("Save dataset (download updated CSV)"):
-        outcsv = df.drop(columns=["Disease_lower"]).to_csv(index=False)
-        st.download_button("Download CSV", data=outcsv, file_name="food_dataset_updated.csv", mime="text/csv")
 
 st.write("*Search for a disease:*")
 col1, col2 = st.columns([3, 1])
@@ -115,6 +123,8 @@ with st.expander("Show full dataset"):
     st.dataframe(df.drop(columns=["Disease_lower"]))
 
 st.caption("Built for educational purposes. Not medical advice.")
+
+
 
 
 
