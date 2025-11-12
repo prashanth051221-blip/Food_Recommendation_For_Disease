@@ -7,38 +7,28 @@ st.set_page_config(page_title="Food Recommendation for Disease", layout="centere
 st.title("🍎 Food Recommendation for Disease")
 st.markdown("An educational tool that recommends foods to eat and avoid for common diseases. *Not medical advice.*")
 
-# ✅ Embedded dataset
+# ✅ Embedded dataset (converted from your CSV)
 data = [
-    {
-        "Disease": "Type 2 Diabetes",
-        "Foods_to_Eat": "Whole grains (brown rice, oats); Non-starchy vegetables (broccoli, spinach); Lean proteins (chicken, tofu, lentils); Nuts; Seeds; Low-fat dairy",
-        "Foods_to_Avoid": "Sugary drinks; White bread; Pastries; Sweets; Fried foods; Full-fat dairy",
-        "Nutritional_Note": "Aim for low-glycemic foods with high fiber to stabilize blood sugar."
-    },
-    {
-        "Disease": "Hypertension",
-        "Foods_to_Eat": "Fruits; Vegetables; Whole grains; Low-fat dairy; Potassium-rich foods",
-        "Foods_to_Avoid": "High-salt foods; Pickles; Processed meats; Chips; Fast food",
-        "Nutritional_Note": "Follow the DASH diet; reducing sodium and increasing potassium helps lower blood pressure."
-    },
-    {
-        "Disease": "Heart Disease / High Cholesterol",
-        "Foods_to_Eat": "Oats; Barley; Fatty fish (salmon, tuna); Legumes; Olive oil; Fruits; Vegetables",
-        "Foods_to_Avoid": "Butter; Cheese; Fried foods; Red meats; Processed snacks",
-        "Nutritional_Note": "Focus on soluble fiber and unsaturated fats to improve cholesterol levels."
-    },
-    {
-        "Disease": "Chronic Kidney Disease (CKD)",
-        "Foods_to_Eat": "Low-sodium meals; Lean proteins in moderation; Apples; Cabbage; Garlic; Olive oil",
-        "Foods_to_Avoid": "High-sodium foods; Processed snacks; Dark sodas; High-phosphorus foods",
-        "Nutritional_Note": "Control intake of sodium, potassium, and phosphorus to protect kidney function."
-    },
-    {
-        "Disease": "Fatty Liver (NAFLD)",
-        "Foods_to_Eat": "Vegetables; Fruits; Whole grains; Olive oil; Fatty fish; Green tea",
-        "Foods_to_Avoid": "Sugar-rich drinks; Refined carbs; Processed meats; Alcohol",
-        "Nutritional_Note": "Weight loss and high-antioxidant foods reduce fat buildup in the liver."
-    }
+    {"Disease": "Type 2 Diabetes", "Foods_to_Eat": "Whole grains (brown rice, oats); Non-starchy vegetables (spinach, broccoli); Legumes; Lean proteins (chicken, fish); Nuts; Berries; Greek yogurt", "Foods_to_Avoid": "Sugary drinks; White bread; Pastries; Sweets; Processed meats; Fried foods", "Nutritional_Note": "Aim for low-glycemic foods with high fiber to maintain stable blood sugar levels."},
+    {"Disease": "Hypertension", "Foods_to_Eat": "Fruits; Vegetables; Whole grains; Low-fat dairy; Lean meats; Fish; Nuts; Potassium-rich foods (bananas, spinach)", "Foods_to_Avoid": "High-salt foods; Pickles; Processed meats; Chips; Excessive alcohol; Sugary snacks", "Nutritional_Note": "Follow the DASH diet; reducing sodium and increasing potassium helps lower blood pressure."},
+    {"Disease": "Heart Disease / High Cholesterol", "Foods_to_Eat": "Oats; Barley; Fatty fish (salmon, tuna); Legumes; Olive oil; Nuts; Fruits; Vegetables", "Foods_to_Avoid": "Butter; Cheese; Fried foods; Red meats; Processed bakery products with trans fats", "Nutritional_Note": "Focus on soluble fiber and unsaturated fats to reduce LDL cholesterol."},
+    {"Disease": "Chronic Kidney Disease (CKD)", "Foods_to_Eat": "Low-sodium meals; Lean proteins in moderation; Low-potassium fruits (apple, berries); White rice; Cauliflower", "Foods_to_Avoid": "High-sodium foods; Processed snacks; Dark sodas; High-phosphorus foods", "Nutritional_Note": "Control intake of sodium, potassium, and phosphorus to protect kidney function."},
+    {"Disease": "Fatty Liver (NAFLD)", "Foods_to_Eat": "Vegetables; Fruits; Whole grains; Olive oil; Fatty fish; Green tea", "Foods_to_Avoid": "Sugar-rich drinks; Refined carbs; Processed meats; Alcohol", "Nutritional_Note": "Weight loss and high-antioxidant foods reduce fat buildup in the liver."},
+    {"Disease": "Anemia", "Foods_to_Eat": "Spinach; Beans; Red meat; Eggs; Fortified cereals; Vitamin C-rich foods (orange, tomato)", "Foods_to_Avoid": "Tea; Coffee; Dairy immediately after meals", "Nutritional_Note": "Pair iron-rich foods with vitamin C to boost absorption."},
+    {"Disease": "Osteoporosis", "Foods_to_Eat": "Milk; Cheese; Yogurt; Leafy greens; Almonds; Sardines", "Foods_to_Avoid": "Excess salt; Caffeine; Alcohol", "Nutritional_Note": "Calcium and Vitamin D help strengthen bones."},
+    {"Disease": "Obesity", "Foods_to_Eat": "Whole grains; Vegetables; Fruits; Lean proteins; Water; Green tea", "Foods_to_Avoid": "Sugary drinks; Processed snacks; Fried foods", "Nutritional_Note": "Focus on calorie deficit and high-fiber foods."},
+    {"Disease": "Constipation", "Foods_to_Eat": "Whole grains; Vegetables; Fruits (prunes, apples); Flaxseeds; Water", "Foods_to_Avoid": "Fried foods; Dairy in excess; Red meat", "Nutritional_Note": "Increase fiber and fluid intake for regular bowel movement."},
+    {"Disease": "Gastritis", "Foods_to_Eat": "Oatmeal; Boiled vegetables; Bananas; Yogurt", "Foods_to_Avoid": "Spicy foods; Citrus; Coffee; Alcohol", "Nutritional_Note": "Eat smaller meals, avoid irritants."},
+    {"Disease": "Hypothyroidism", "Foods_to_Eat": "Iodized salt; Eggs; Fish; Nuts; Fruits; Vegetables", "Foods_to_Avoid": "Soy; Cruciferous vegetables in excess (cabbage, broccoli)", "Nutritional_Note": "Ensure adequate iodine and selenium intake."},
+    {"Disease": "Migraine", "Foods_to_Eat": "Whole grains; Leafy vegetables; Magnesium-rich foods (almonds, spinach)", "Foods_to_Avoid": "Chocolate; Aged cheese; Alcohol; Caffeine", "Nutritional_Note": "Avoid known dietary triggers."},
+    {"Disease": "Acid Reflux (GERD)", "Foods_to_Eat": "Oatmeal; Bananas; Ginger; Lean meat; Green vegetables", "Foods_to_Avoid": "Spicy foods; Tomato; Citrus; Fried items; Soda", "Nutritional_Note": "Eat smaller, low-fat meals and avoid late-night eating."},
+    {"Disease": "Arthritis", "Foods_to_Eat": "Fatty fish; Olive oil; Fruits; Vegetables; Whole grains", "Foods_to_Avoid": "Red meat; Fried foods; Sugary desserts", "Nutritional_Note": "Anti-inflammatory diet helps reduce joint pain."},
+    {"Disease": "Asthma", "Foods_to_Eat": "Fruits; Vegetables; Whole grains; Omega-3 rich fish", "Foods_to_Avoid": "Processed foods; Sulfites; Fried items", "Nutritional_Note": "Antioxidant-rich foods improve lung health."},
+    {"Disease": "PCOS", "Foods_to_Eat": "Whole grains; Lean proteins; Low-GI fruits; Vegetables; Seeds", "Foods_to_Avoid": "Sugary foods; Refined carbs; Dairy in excess", "Nutritional_Note": "Focus on low-glycemic index foods to manage insulin."},
+    {"Disease": "Cancer (General Nutrition)", "Foods_to_Eat": "Fruits; Vegetables; Whole grains; Lean proteins; Green tea", "Foods_to_Avoid": "Processed meats; Alcohol; Fried foods", "Nutritional_Note": "Antioxidant and anti-inflammatory foods support recovery."},
+    {"Disease": "Dengue", "Foods_to_Eat": "Papaya leaf juice; Coconut water; Fruits; Vegetables", "Foods_to_Avoid": "Oily foods; Spicy foods; Caffeine", "Nutritional_Note": "Stay hydrated and focus on immune-boosting foods."},
+    {"Disease": "Typhoid", "Foods_to_Eat": "Boiled vegetables; Soups; Porridge; Fruits like banana", "Foods_to_Avoid": "Spicy foods; Fried foods; High-fiber raw vegetables", "Nutritional_Note": "Soft, easy-to-digest foods support recovery."},
+    {"Disease": "Jaundice", "Foods_to_Eat": "Fruits; Vegetables; Lemon water; Whole grains", "Foods_to_Avoid": "Fried foods; Spicy foods; Alcohol", "Nutritional_Note": "Hydration and antioxidants aid liver healing."},
 ]
 
 # Create DataFrame
@@ -123,6 +113,8 @@ with st.expander("Show full dataset"):
     st.dataframe(df.drop(columns=["Disease_lower"]))
 
 st.caption("Built for educational purposes. Not medical advice.")
+
+
 
 
 
