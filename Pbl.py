@@ -9,7 +9,7 @@ st.title("🍎 Food Recommendation for Disease")
 st.markdown("An educational tool that recommends foods to eat and avoid for common diseases. *Not medical advice.*")
 
 # ✅ Your dataset path
-DATA_PATH = Path(r"D:\pbl\food_dataset.csv")
+DATA_PATH = Path(r"C:\Users\prash\Downloads\food_dataset_updated.csv")
 
 @st.cache_data
 def load_data(path):
@@ -115,5 +115,6 @@ with st.expander("Show full dataset"):
     st.dataframe(df.drop(columns=["Disease_lower"]))
 
 st.caption("Built for educational purposes. Not medical advice.")
+
 
 
