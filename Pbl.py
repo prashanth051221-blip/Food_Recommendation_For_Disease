@@ -4,115 +4,180 @@ from rapidfuzz import process, fuzz
 
 st.set_page_config(page_title="Food Recommendation for Disease", layout="centered")
 
-st.title("🍎 Food Recommendation for Disease")
-st.markdown("An educational tool that recommends foods to eat and avoid for common diseases. *Not medical advice.*")
+st.title("🍎 Food Recommendation System")
+st.markdown("Educational tool that recommends foods for diseases. *Not medical advice.*")
 
-# ✅ Embedded dataset (converted from your CSV)
+# Tabs
+tab1, tab2, tab3 = st.tabs([
+    "🔎 Disease Search",
+    "📊 BMI Calculator",
+    "🥗 Diet Planner"
+])
+
+# ---------------------------
+# DATASET
+# ---------------------------
+
 data = [
-    {"Disease": "Type 2 Diabetes", "Foods_to_Eat": "Whole grains (brown rice, oats); Non-starchy vegetables (spinach, broccoli); Legumes; Lean proteins (chicken, fish); Nuts; Berries; Greek yogurt", "Foods_to_Avoid": "Sugary drinks; White bread; Pastries; Sweets; Processed meats; Fried foods", "Nutritional_Note": "Aim for low-glycemic foods with high fiber to maintain stable blood sugar levels."},
-    {"Disease": "Hypertension", "Foods_to_Eat": "Fruits; Vegetables; Whole grains; Low-fat dairy; Lean meats; Fish; Nuts; Potassium-rich foods (bananas, spinach)", "Foods_to_Avoid": "High-salt foods; Pickles; Processed meats; Chips; Excessive alcohol; Sugary snacks", "Nutritional_Note": "Follow the DASH diet; reducing sodium and increasing potassium helps lower blood pressure."},
-    {"Disease": "Heart Disease / High Cholesterol", "Foods_to_Eat": "Oats; Barley; Fatty fish (salmon, tuna); Legumes; Olive oil; Nuts; Fruits; Vegetables", "Foods_to_Avoid": "Butter; Cheese; Fried foods; Red meats; Processed bakery products with trans fats", "Nutritional_Note": "Focus on soluble fiber and unsaturated fats to reduce LDL cholesterol."},
-    {"Disease": "Chronic Kidney Disease (CKD)", "Foods_to_Eat": "Low-sodium meals; Lean proteins in moderation; Low-potassium fruits (apple, berries); White rice; Cauliflower", "Foods_to_Avoid": "High-sodium foods; Processed snacks; Dark sodas; High-phosphorus foods", "Nutritional_Note": "Control intake of sodium, potassium, and phosphorus to protect kidney function."},
-    {"Disease": "Fatty Liver (NAFLD)", "Foods_to_Eat": "Vegetables; Fruits; Whole grains; Olive oil; Fatty fish; Green tea", "Foods_to_Avoid": "Sugar-rich drinks; Refined carbs; Processed meats; Alcohol", "Nutritional_Note": "Weight loss and high-antioxidant foods reduce fat buildup in the liver."},
-    {"Disease": "Anemia", "Foods_to_Eat": "Spinach; Beans; Red meat; Eggs; Fortified cereals; Vitamin C-rich foods (orange, tomato)", "Foods_to_Avoid": "Tea; Coffee; Dairy immediately after meals", "Nutritional_Note": "Pair iron-rich foods with vitamin C to boost absorption."},
-    {"Disease": "Osteoporosis", "Foods_to_Eat": "Milk; Cheese; Yogurt; Leafy greens; Almonds; Sardines", "Foods_to_Avoid": "Excess salt; Caffeine; Alcohol", "Nutritional_Note": "Calcium and Vitamin D help strengthen bones."},
-    {"Disease": "Obesity", "Foods_to_Eat": "Whole grains; Vegetables; Fruits; Lean proteins; Water; Green tea", "Foods_to_Avoid": "Sugary drinks; Processed snacks; Fried foods", "Nutritional_Note": "Focus on calorie deficit and high-fiber foods."},
-    {"Disease": "Constipation", "Foods_to_Eat": "Whole grains; Vegetables; Fruits (prunes, apples); Flaxseeds; Water", "Foods_to_Avoid": "Fried foods; Dairy in excess; Red meat", "Nutritional_Note": "Increase fiber and fluid intake for regular bowel movement."},
-    {"Disease": "Gastritis", "Foods_to_Eat": "Oatmeal; Boiled vegetables; Bananas; Yogurt", "Foods_to_Avoid": "Spicy foods; Citrus; Coffee; Alcohol", "Nutritional_Note": "Eat smaller meals, avoid irritants."},
-    {"Disease": "Hypothyroidism", "Foods_to_Eat": "Iodized salt; Eggs; Fish; Nuts; Fruits; Vegetables", "Foods_to_Avoid": "Soy; Cruciferous vegetables in excess (cabbage, broccoli)", "Nutritional_Note": "Ensure adequate iodine and selenium intake."},
-    {"Disease": "Migraine", "Foods_to_Eat": "Whole grains; Leafy vegetables; Magnesium-rich foods (almonds, spinach)", "Foods_to_Avoid": "Chocolate; Aged cheese; Alcohol; Caffeine", "Nutritional_Note": "Avoid known dietary triggers."},
-    {"Disease": "Acid Reflux (GERD)", "Foods_to_Eat": "Oatmeal; Bananas; Ginger; Lean meat; Green vegetables", "Foods_to_Avoid": "Spicy foods; Tomato; Citrus; Fried items; Soda", "Nutritional_Note": "Eat smaller, low-fat meals and avoid late-night eating."},
-    {"Disease": "Arthritis", "Foods_to_Eat": "Fatty fish; Olive oil; Fruits; Vegetables; Whole grains", "Foods_to_Avoid": "Red meat; Fried foods; Sugary desserts", "Nutritional_Note": "Anti-inflammatory diet helps reduce joint pain."},
-    {"Disease": "Asthma", "Foods_to_Eat": "Fruits; Vegetables; Whole grains; Omega-3 rich fish", "Foods_to_Avoid": "Processed foods; Sulfites; Fried items", "Nutritional_Note": "Antioxidant-rich foods improve lung health."},
-    {"Disease": "PCOS", "Foods_to_Eat": "Whole grains; Lean proteins; Low-GI fruits; Vegetables; Seeds", "Foods_to_Avoid": "Sugary foods; Refined carbs; Dairy in excess", "Nutritional_Note": "Focus on low-glycemic index foods to manage insulin."},
-    {"Disease": "Cancer (General Nutrition)", "Foods_to_Eat": "Fruits; Vegetables; Whole grains; Lean proteins; Green tea", "Foods_to_Avoid": "Processed meats; Alcohol; Fried foods", "Nutritional_Note": "Antioxidant and anti-inflammatory foods support recovery."},
-    {"Disease": "Dengue", "Foods_to_Eat": "Papaya leaf juice; Coconut water; Fruits; Vegetables", "Foods_to_Avoid": "Oily foods; Spicy foods; Caffeine", "Nutritional_Note": "Stay hydrated and focus on immune-boosting foods."},
-    {"Disease": "Typhoid", "Foods_to_Eat": "Boiled vegetables; Soups; Porridge; Fruits like banana", "Foods_to_Avoid": "Spicy foods; Fried foods; High-fiber raw vegetables", "Nutritional_Note": "Soft, easy-to-digest foods support recovery."},
-    {"Disease": "Jaundice", "Foods_to_Eat": "Fruits; Vegetables; Lemon water; Whole grains", "Foods_to_Avoid": "Fried foods; Spicy foods; Alcohol", "Nutritional_Note": "Hydration and antioxidants aid liver healing."},
+
+{"Disease":"Type 2 Diabetes","Foods_to_Eat":"Whole grains; Vegetables; Legumes; Lean proteins; Nuts","Foods_to_Avoid":"Sugary drinks; White bread; Pastries","Nutritional_Note":"Low glycemic foods recommended"},
+
+{"Disease":"Hypertension","Foods_to_Eat":"Fruits; Vegetables; Whole grains; Low fat dairy","Foods_to_Avoid":"High salt foods; Chips; Processed meat","Nutritional_Note":"Follow DASH diet"},
+
+{"Disease":"Heart Disease","Foods_to_Eat":"Oats; Fish; Nuts; Fruits; Vegetables","Foods_to_Avoid":"Fried food; Red meat","Nutritional_Note":"Focus on fiber and healthy fats"},
+
+{"Disease":"Fatty Liver","Foods_to_Eat":"Vegetables; Fruits; Whole grains; Olive oil","Foods_to_Avoid":"Sugar drinks; Alcohol","Nutritional_Note":"Weight loss recommended"},
+
+{"Disease":"Anemia","Foods_to_Eat":"Spinach; Beans; Red meat; Eggs; Vitamin C foods","Foods_to_Avoid":"Tea; Coffee after meals","Nutritional_Note":"Iron + vitamin C improves absorption"}
+
 ]
 
-# Create DataFrame
 df = pd.DataFrame(data)
 df["Disease_lower"] = df["Disease"].str.lower()
 diseases = df["Disease"].tolist()
 
-# Sidebar controls
-with st.sidebar:
-    st.header("Controls")
-    use_fuzzy = st.checkbox("Enable fuzzy search (tolerate typos)", value=True)
-    pref_veg = st.checkbox("Vegetarian-friendly results", value=False)
-    pref_lowsugar = st.checkbox("Low-sugar preference (hide sugary foods)", value=False)
-    pref_lowsodium = st.checkbox("Low-sodium preference (hide high-salt foods)", value=False)
+# ---------------------------
+# SEARCH FUNCTION
+# ---------------------------
 
-st.write("*Search for a disease:*")
-col1, col2 = st.columns([3, 1])
-with col1:
-    query = st.text_input("Type disease name (or pick from dropdown)", value="")
-with col2:
-    selected = st.selectbox("Or choose", ["-- none --"] + diseases)
+def find_matches(query):
 
-def apply_preferences(text, veg=False, lowsugar=False, lowsodium=False):
-    txt = str(text)
-    lowered = txt.lower()
-    if veg:
-        blacklist = ["chicken","fish","meat","egg","eggs","salmon","tuna","beef","pork","shellfish"]
-        for b in blacklist:
-            lowered = lowered.replace(b, "[removed]")
-    if lowsugar:
-        sugar_words = ["sugar","sugary","sweets","honey","jaggery","syrup"]
-        for s in sugar_words:
-            lowered = lowered.replace(s, "[removed]")
-    if lowsodium:
-        salt_words = ["salt","salty","pickles","processed","chips"]
-        for s in salt_words:
-            lowered = lowered.replace(s, "[removed]")
-    return lowered.replace("[removed]", "(removed due to preference)")
-
-def find_matches(query, df, use_fuzzy=True, limit=5):
     q = query.strip().lower()
+
     if not q:
         return pd.DataFrame()
-    if use_fuzzy:
-        choices = df["Disease"].tolist()
-        results = process.extract(q, choices, scorer=fuzz.token_sort_ratio, limit=limit)
-        matches = [r[0] for r in results if r[1] > 50]
-        return df[df["Disease"].isin(matches)]
+
+    choices = df["Disease"].tolist()
+
+    results = process.extract(
+        q,
+        choices,
+        scorer=fuzz.token_sort_ratio,
+        limit=5
+    )
+
+    matches = [r[0] for r in results if r[1] > 50]
+
+    return df[df["Disease"].isin(matches)]
+
+# ---------------------------
+# TAB 1 — DISEASE SEARCH
+# ---------------------------
+
+with tab1:
+
+    st.header("🔎 Search Disease")
+
+    query = st.text_input("Type disease name")
+
+    selected = st.selectbox(
+        "Or select disease",
+        ["-- none --"] + diseases
+    )
+
+    results_df = pd.DataFrame()
+
+    if selected != "-- none --":
+        results_df = df[df["Disease"] == selected]
+
+    elif query:
+        results_df = find_matches(query)
+
+    if results_df.empty:
+        st.info("Search or select a disease")
+
     else:
-        return df[df["Disease_lower"].str.contains(q)]
 
-results_df = pd.DataFrame()
-if selected != "-- none --":
-    results_df = df[df["Disease"] == selected]
-elif query.strip():
-    results_df = find_matches(query, df, use_fuzzy=use_fuzzy, limit=10)
+        for _, row in results_df.iterrows():
 
-if results_df.empty:
-    st.info("No disease selected. Choose from dropdown or type a name to search.")
-else:
-    for _, row in results_df.iterrows():
-        st.header(row["Disease"])
-        eat = apply_preferences(row["Foods_to_Eat"], veg=pref_veg, lowsugar=pref_lowsugar, lowsodium=pref_lowsodium)
-        avoid = apply_preferences(row["Foods_to_Avoid"], veg=pref_veg, lowsugar=pref_lowsugar, lowsodium=pref_lowsodium)
-        note = row.get("Nutritional_Note", "")
-        st.subheader("Foods to Eat ✅")
-        for item in str(eat).split(";"):
-            item = item.strip()
-            if item:
-                st.markdown(f"- {item}")
-        st.subheader("Foods to Avoid ⛔")
-        for item in str(avoid).split(";"):
-            item = item.strip()
-            if item:
-                st.markdown(f"- {item}")
-        if note:
-            st.subheader("Nutritional Note")
-            st.write(note)
-        st.markdown("---")
+            st.subheader(row["Disease"])
 
-with st.expander("Show full dataset"):
-    st.dataframe(df.drop(columns=["Disease_lower"]))
+            st.write("### ✅ Foods to Eat")
 
-st.caption("Built for educational purposes. Not medical advice.")
+            for item in row["Foods_to_Eat"].split(";"):
+                st.write("•", item.strip())
+
+            st.write("### ⛔ Foods to Avoid")
+
+            for item in row["Foods_to_Avoid"].split(";"):
+                st.write("•", item.strip())
+
+            st.write("### 📌 Nutrition Note")
+
+            st.write(row["Nutritional_Note"])
+
+            st.markdown("---")
+
+    with st.expander("View dataset"):
+        st.dataframe(df.drop(columns=["Disease_lower"]))
+
+# ---------------------------
+# TAB 2 — BMI CALCULATOR
+# ---------------------------
+
+with tab2:
+
+    st.header("📊 BMI Calculator")
+
+    weight = st.number_input("Enter weight (kg)", min_value=1.0)
+    height = st.number_input("Enter height (meters)", min_value=0.5)
+
+    if st.button("Calculate BMI"):
+
+        bmi = weight / (height ** 2)
+
+        st.subheader(f"Your BMI: {round(bmi,2)}")
+
+        if bmi < 18.5:
+            st.warning("Underweight")
+
+        elif bmi < 25:
+            st.success("Normal Weight")
+
+        elif bmi < 30:
+            st.warning("Overweight")
+
+        else:
+            st.error("Obese")
+
+# ---------------------------
+# TAB 3 — DIET PLANNER
+# ---------------------------
+
+with tab3:
+
+    st.header("🥗 Daily Diet Planner")
+
+    goal = st.selectbox(
+        "Select your goal",
+        ["Weight Loss", "Muscle Gain", "Healthy Diet"]
+    )
+
+    if st.button("Generate Diet Plan"):
+
+        if goal == "Weight Loss":
+
+            st.write("🍳 Breakfast: Oatmeal + Fruits")
+            st.write("🥗 Lunch: Brown rice + Vegetables")
+            st.write("🍲 Dinner: Soup + Salad")
+            st.write("🥜 Snacks: Nuts")
+
+        elif goal == "Muscle Gain":
+
+            st.write("🍳 Breakfast: Eggs + Whole wheat toast")
+            st.write("🥗 Lunch: Chicken / Paneer + Brown rice")
+            st.write("🍲 Dinner: Fish / Dal + Vegetables")
+            st.write("🥜 Snacks: Peanut butter + Banana")
+
+        else:
+
+            st.write("🍳 Breakfast: Fruits + Yogurt")
+            st.write("🥗 Lunch: Rice + Dal + Vegetables")
+            st.write("🍲 Dinner: Chapati + Paneer")
+            st.write("🥜 Snacks: Dry fruits")
+
+st.caption("⚠ Educational tool only. Not medical advice.")
+
 
 
 
