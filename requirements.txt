@@ -1,10 +1,6 @@
 pandas==2.3.2
 streamlit==1.49.1
-rapidfuzz==3.9.7
-huggingface_hub
-pymongo
-dnspython
-matplotlib
-protobuf<6
-
-
+pymongo==4.16.0
+matplotlib==3.10.8
+huggingface_hub==1.7.2
+rapidfuzz==3.14.3
