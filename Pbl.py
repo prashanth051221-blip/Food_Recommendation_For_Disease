@@ -1,9 +1,23 @@
 import streamlit as st
 import pandas as pd
+import pickle
+import os
 from rapidfuzz import process, fuzz
 from huggingface_hub import InferenceClient
 from pymongo import MongoClient
 import matplotlib.pyplot as plt
+
+# -----------------------------
+# LOAD ML MODEL FILES
+# -----------------------------
+@st.cache_resource
+def load_model():
+    model = pickle.load(open("model.pkl", "rb"))
+    columns = pickle.load(open("columns.pkl", "rb"))
+    le = pickle.load(open("label_encoder.pkl", "rb"))
+    return model, columns, le
+
+model, ml_columns, le = load_model()
 
 # -----------------------------
 # SESSION STATE
@@ -27,7 +41,7 @@ client_ai = InferenceClient(api_key=HF_TOKEN)
 # MONGODB CONNECTION
 # -----------------------------
 
-MONGO_URI = "mongodb+srv://yvasundhara87_db_user:fS7r5CXOllfvIUUw@cluster0.kinaeyu.mongodb.net/?appName=Cluster0"
+MONGO_URI = os.getenv("MONGO_URI", "mongodb+srv://yvasundhara87_db_user:fS7r5CXOllfvIUUw@cluster0.kinaeyu.mongodb.net/?appName=Cluster0")
 
 mongo_client = MongoClient(MONGO_URI)
 
@@ -124,12 +138,13 @@ if st.session_state.logged_in:
 
     username = st.session_state.username
 
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "🔎 Disease Search",
         "📊 BMI Calculator",
         "📈 BMI History",
         "🥗 Diet Planner",
-        "🤖 AI Chatbot"
+        "🤖 AI Chatbot",
+        "🧠 Disease Prediction"
     ])
 
     # -----------------------------
@@ -338,5 +353,38 @@ if st.session_state.logged_in:
 
                 st.write(answer)
 
+    # -----------------------------
+    # TAB 6 ML DISEASE PREDICTION
+    # -----------------------------
 
+    with tab6:
+
+        st.header("🧠 Disease Prediction")
+        st.write("Select your symptoms below to predict possible diseases using our ML model.")
+
+        input_dict = {}
+        cols_ui = st.columns(2)
+
+        for i, col in enumerate(ml_columns):
+            with cols_ui[i % 2]:
+                input_dict[col] = st.checkbox(col)
+
+        if st.button("Predict Disease"):
+
+            if sum(input_dict.values()) == 0:
+                st.warning("Please select at least one symptom")
+            else:
+                input_data = [1 if input_dict[col] else 0 for col in ml_columns]
+
+                prediction = model.predict([input_data])
+                disease_name = le.inverse_transform(prediction)
+
+                st.success(f"Predicted Disease: {disease_name[0]}")
+
+                try:
+                    proba = model.predict_proba([input_data])
+                    confidence = max(proba[0]) * 100
+                    st.info(f"Confidence: {confidence:.2f}%")
+                except:
+                    pass
 
