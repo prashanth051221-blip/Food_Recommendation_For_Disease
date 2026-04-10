@@ -30,9 +30,9 @@ def set_bg():
 # -----------------------------
 def download_files():
     files = {
-        "model.pkl": "https://drive.google.com/file/d/1YM1m34g0d9FXvmAk8YFTeT9mq0ccuFeN/view?usp=drivesdk",
-        "columns.pkl": "https://drive.google.com/file/d/1cO6XOBDWPl3PlOIJ-RVZsa3pHO-qtT46/view?usp=drivesdk",
-        "label_encoder.pkl": "https://drive.google.com/file/d/10szcH40veSjYbH3N1XX1DNND6t3UW6PH/view?usp=drivesdk"
+        "model.pkl": "1YM1m34g0d9FXvmAk8YFTeT9mq0ccuFeN",
+        "columns.pkl": "1cO6XOBDWPl3PlOIJ-RVZsa3pHO-qtT46",
+        "label_encoder.pkl": "10szcH40veSjYbH3N1XX1DNND6t3UW6PH"
     }
 
     for file, fid in files.items():
