@@ -1,342 +1,211 @@
 import streamlit as st
 import pandas as pd
-from rapidfuzz import process, fuzz
-from huggingface_hub import InferenceClient
+import pickle
 from pymongo import MongoClient
+import os
+from rapidfuzz import process, fuzz
 import matplotlib.pyplot as plt
 
 # -----------------------------
-# SESSION STATE
+# BACKGROUND
 # -----------------------------
-
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-
-if "username" not in st.session_state:
-    st.session_state.username = ""
+def set_bg():
+    st.markdown("""
+        <style>
+        .stApp {
+            background: linear-gradient(to bottom right, #a8d8e8, #1e6fb9);
+        }
+        .block-container {
+            background: rgba(0,0,0,0.6);
+            padding: 1.5rem;
+            border-radius: 15px;
+        }
+        h1,h2,h3 { color:white; }
+        </style>
+    """, unsafe_allow_html=True)
 
 # -----------------------------
-# HUGGING FACE API
+# MODEL
 # -----------------------------
+@st.cache_resource
+def load_model():
+    model = pickle.load(open("model.pkl", "rb"))
+    columns = pickle.load(open("columns.pkl", "rb"))
+    le = pickle.load(open("label_encoder.pkl", "rb"))
+    return model, columns, le
 
-HF_TOKEN = ""
-
-client_ai = InferenceClient(api_key=HF_TOKEN)
+model, columns, le = load_model()
 
 # -----------------------------
-# MONGODB CONNECTION
+# MONGO (UNCHANGED)
 # -----------------------------
-
-MONGO_URI = "mongodb+srv://yvasundhara87_db_user:fS7r5CXOllfvIUUw@cluster0.kinaeyu.mongodb.net/?appName=Cluster0"
-
-mongo_client = MongoClient(MONGO_URI)
-
-db = mongo_client["health_app"]
-
+client = MongoClient(st.secrets("MONGO_URI"))
+db = client["health_app"]
 users_collection = db["users"]
 bmi_collection = db["bmi_records"]
 
 # -----------------------------
-# PAGE CONFIG
+# SESSION
 # -----------------------------
-
-st.set_page_config(page_title="Food Recommendation System", layout="centered")
-
-st.title("🍎 Food Recommendation System")
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "username" not in st.session_state:
+    st.session_state.username = ""
 
 # -----------------------------
-# LOGIN / REGISTER
+# UI
 # -----------------------------
+st.set_page_config(page_title="AI Health Assistant")
+set_bg()
+st.title("🩺 AI Health Assistant")
 
-menu = ["Login", "Register"]
+menu = st.sidebar.selectbox("Menu", ["Login", "Register"])
 
-choice = st.sidebar.selectbox("Account", menu)
+# -----------------------------
+# REGISTER
+# -----------------------------
+if menu == "Register" and not st.session_state.logged_in:
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
 
-# LOGOUT
+    if st.button("Register"):
+        if users_collection.find_one({"username": username}):
+            st.warning("User exists")
+        else:
+            users_collection.insert_one({"username": username, "password": password})
+            st.success("Registered")
+
+# -----------------------------
+# LOGIN
+# -----------------------------
+elif menu == "Login" and not st.session_state.logged_in:
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+
+    if st.button("Login"):
+        user = users_collection.find_one({"username": username, "password": password})
+        if user:
+            st.session_state.logged_in = True
+            st.session_state.username = username
+            st.rerun()
+        else:
+            st.error("Invalid credentials")
+
+# -----------------------------
+# MAIN APP
+# -----------------------------
 if st.session_state.logged_in:
+
+    st.sidebar.success(f"Logged in as {st.session_state.username}")
+
     if st.sidebar.button("Logout"):
         st.session_state.logged_in = False
         st.session_state.username = ""
         st.rerun()
 
-# -----------------------------
-# REGISTER
-# -----------------------------
-
-if choice == "Register" and not st.session_state.logged_in:
-
-    st.subheader("Create Account")
-
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-
-    if st.button("Register"):
-
-        user = users_collection.find_one({"username": username})
-
-        if user:
-            st.warning("User already exists")
-
-        else:
-
-            users_collection.insert_one({
-                "username": username,
-                "password": password
-            })
-
-            st.success("Account created successfully")
-
-# -----------------------------
-# LOGIN
-# -----------------------------
-
-elif choice == "Login" and not st.session_state.logged_in:
-
-    st.subheader("Login")
-
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-
-    if st.button("Login"):
-
-        user = users_collection.find_one({
-            "username": username,
-            "password": password
-        })
-
-        if user:
-
-            st.session_state.logged_in = True
-            st.session_state.username = username
-
-            st.success("Login successful")
-
-            st.rerun()
-
-        else:
-            st.error("Invalid username or password")
-
-# -----------------------------
-# MAIN APP AFTER LOGIN
-# -----------------------------
-
-if st.session_state.logged_in:
-
-    username = st.session_state.username
-
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "🔎 Disease Search",
-        "📊 BMI Calculator",
-        "📈 BMI History",
-        "🥗 Diet Planner",
-        "🤖 AI Chatbot"
-    ])
-
     # -----------------------------
-    # DATASET
+    # DATASET (FULL)
     # -----------------------------
-
     data = [
-    {"Disease":"Type 2 Diabetes","Foods_to_Eat":"Whole grains; Vegetables; Legumes; Lean proteins; Nuts","Foods_to_Avoid":"Sugary drinks; White bread; Pastries","Nutritional_Note":"Low glycemic foods recommended"},
-    {"Disease":"Hypertension","Foods_to_Eat":"Fruits; Vegetables; Whole grains; Low fat dairy","Foods_to_Avoid":"High salt foods; Chips; Processed meat","Nutritional_Note":"Follow DASH diet"},
-    {"Disease":"Heart Disease","Foods_to_Eat":"Oats; Fish; Nuts; Fruits; Vegetables","Foods_to_Avoid":"Fried food; Red meat","Nutritional_Note":"Focus on fiber and healthy fats"},
-    {"Disease":"Fatty Liver","Foods_to_Eat":"Vegetables; Fruits; Whole grains; Olive oil","Foods_to_Avoid":"Sugar drinks; Alcohol","Nutritional_Note":"Weight loss recommended"},
-    {"Disease":"Anemia","Foods_to_Eat":"Spinach; Beans; Red meat; Eggs; Vitamin C foods","Foods_to_Avoid":"Tea; Coffee after meals","Nutritional_Note":"Iron + vitamin C improves absorption"}
+        {"Disease":"Common Cold","Description":"Viral infection affecting nose and throat.","Foods_to_Eat":"Warm soup; Ginger tea; Honey; Citrus fruits; Garlic; Herbal tea","Foods_to_Avoid":"Cold drinks; Ice cream; Junk food; Fried food","Note":"Stay hydrated"},
+        {"Disease":"Osteoporosis","Description":"Weak bones.","Foods_to_Eat":"Milk; Cheese; Yogurt; Almonds; Broccoli","Foods_to_Avoid":"Caffeine; Soda","Note":"Calcium needed"},
+        {"Disease":"Bronchitis","Description":"Lung inflammation.","Foods_to_Eat":"Warm fluids; Honey; Ginger","Foods_to_Avoid":"Smoking; Cold drinks","Note":"Avoid pollution"},
+        {"Disease":"Eczema","Description":"Skin inflammation.","Foods_to_Eat":"Fruits; Vegetables; Omega-3","Foods_to_Avoid":"Dairy; Sugar","Note":"Hydrate skin"},
+        {"Disease":"Multiple Sclerosis","Description":"Nerve disease.","Foods_to_Eat":"Healthy fats; Fish","Foods_to_Avoid":"Processed food","Note":"Balanced diet"},
+        {"Disease":"Osteoarthritis","Description":"Joint pain.","Foods_to_Eat":"Fish; Nuts; Vegetables","Foods_to_Avoid":"Fried food","Note":"Maintain weight"},
+        {"Disease":"Hypothyroidism","Description":"Low thyroid.","Foods_to_Eat":"Eggs; Dairy","Foods_to_Avoid":"Soy","Note":"Balanced nutrition"},
+        {"Disease":"Gastroenteritis","Description":"Stomach infection.","Foods_to_Eat":"Rice; Banana; ORS","Foods_to_Avoid":"Spicy food","Note":"Hydration"},
+        {"Disease":"Allergic Rhinitis","Description":"Allergy condition.","Foods_to_Eat":"Fruits; Vitamin C","Foods_to_Avoid":"Dust","Note":"Avoid triggers"},
+        {"Disease":"Depression","Description":"Mental disorder.","Foods_to_Eat":"Fish; Nuts","Foods_to_Avoid":"Alcohol","Note":"Healthy lifestyle"},
+        {"Disease":"Hyperthyroidism","Description":"High thyroid.","Foods_to_Eat":"Vegetables","Foods_to_Avoid":"Iodine excess","Note":"Monitor"},
+        {"Disease":"Migraine","Description":"Headache.","Foods_to_Eat":"Banana; Almonds","Foods_to_Avoid":"Caffeine","Note":"Avoid triggers"},
+        {"Disease":"Psoriasis","Description":"Skin disease.","Foods_to_Eat":"Vegetables","Foods_to_Avoid":"Alcohol","Note":"Reduce inflammation"},
+        {"Disease":"Stroke","Description":"Brain damage.","Foods_to_Eat":"Fruits; Fish","Foods_to_Avoid":"Salt","Note":"Heart diet"},
+        {"Disease":"Hypertension","Description":"High BP.","Foods_to_Eat":"Bananas","Foods_to_Avoid":"Salt","Note":"Low sodium"},
+        {"Disease":"Urinary Tract Infection","Description":"Urinary infection.","Foods_to_Eat":"Water; Juice","Foods_to_Avoid":"Caffeine","Note":"Hydrate"},
+        {"Disease":"Pneumonia","Description":"Lung infection.","Foods_to_Eat":"Soup; Fluids","Foods_to_Avoid":"Cold drinks","Note":"Rest"},
+        {"Disease":"Alzheimer's Disease","Description":"Memory loss.","Foods_to_Eat":"Nuts; Fish","Foods_to_Avoid":"Sugar","Note":"Brain diet"},
+        {"Disease":"Coronary Artery Disease","Description":"Heart blockage.","Foods_to_Eat":"Oats; Fish","Foods_to_Avoid":"Fried food","Note":"Low fat"},
+        {"Disease":"Rheumatoid Arthritis","Description":"Joint disease.","Foods_to_Eat":"Omega-3","Foods_to_Avoid":"Sugar","Note":"Anti-inflammatory"},
+        {"Disease":"Liver Cancer","Description":"Liver cancer.","Foods_to_Eat":"Fruits","Foods_to_Avoid":"Alcohol","Note":"Care needed"},
+        {"Disease":"Parkinson's Disease","Description":"Movement disorder.","Foods_to_Eat":"Fiber","Foods_to_Avoid":"Processed food","Note":"Balanced diet"},
+        {"Disease":"Kidney Disease","Description":"Kidney issue.","Foods_to_Eat":"Low sodium foods","Foods_to_Avoid":"Salt","Note":"Monitor"},
+        {"Disease":"Anxiety Disorders","Description":"Mental issue.","Foods_to_Eat":"Nuts","Foods_to_Avoid":"Caffeine","Note":"Relax"},
+        {"Disease":"Liver Disease","Description":"Liver problem.","Foods_to_Eat":"Vegetables","Foods_to_Avoid":"Alcohol","Note":"Avoid toxins"},
+        {"Disease":"Diabetes","Description":"High sugar.","Foods_to_Eat":"Whole grains","Foods_to_Avoid":"Sugar","Note":"Control"},
+        {"Disease":"Asthma","Description":"Breathing issue.","Foods_to_Eat":"Fruits","Foods_to_Avoid":"Cold drinks","Note":"Avoid triggers"},
+        {"Disease":"Influenza","Description":"Flu.","Foods_to_Eat":"Soup","Foods_to_Avoid":"Cold drinks","Note":"Rest"},
+        {"Disease":"Kidney Cancer","Description":"Kidney cancer.","Foods_to_Eat":"Healthy diet","Foods_to_Avoid":"Processed food","Note":"Medical care"}
     ]
 
     df = pd.DataFrame(data)
-
     diseases = df["Disease"].tolist()
 
-    # -----------------------------
-    # FUZZY SEARCH FUNCTION
-    # -----------------------------
-
-    def find_matches(query):
-
-        q = query.strip().lower()
-
-        if not q:
-            return pd.DataFrame()
-
-        choices = df["Disease"].tolist()
-
-        results = process.extract(
-            q,
-            choices,
-            scorer=fuzz.token_sort_ratio,
-            limit=5
-        )
-
-        matches = [r[0] for r in results if r[1] > 50]
-
-        return df[df["Disease"].isin(matches)]
+    def find_matches(q):
+        results = process.extract(q, diseases, scorer=fuzz.token_sort_ratio, limit=5)
+        return df[df["Disease"].isin([r[0] for r in results if r[1] > 50])]
 
     # -----------------------------
-    # TAB 1 DISEASE SEARCH
+    # TABS
     # -----------------------------
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(
+        ["🔎 Search", "📊 BMI", "📈 History", "🥗 Diet", "🧠 Prediction"]
+    )
 
+    # TAB 1
     with tab1:
-
-        st.header("🔎 Search Disease")
-
-        query = st.text_input("Type disease name")
-
-        selected = st.selectbox(
-            "Or select disease",
-            ["-- none --"] + diseases
-        )
-
-        results_df = pd.DataFrame()
-
-        if selected != "-- none --":
-            results_df = df[df["Disease"] == selected]
-
-        elif query:
-            results_df = find_matches(query)
-
-        if results_df.empty:
-            st.info("Search or select a disease")
-
-        else:
-
-            for _, row in results_df.iterrows():
-
+        query = st.text_input("Search Disease")
+        if query:
+            results = find_matches(query)
+            for _, row in results.iterrows():
                 st.subheader(row["Disease"])
+                st.write("🧾", row["Description"])
 
-                st.write("### Foods to Eat")
+                for i in row["Foods_to_Eat"].split(";"):
+                    st.write("✅", i.strip())
 
-                for item in row["Foods_to_Eat"].split(";"):
-                    st.write("•", item.strip())
+                for i in row["Foods_to_Avoid"].split(";"):
+                    st.write("❌", i.strip())
 
-                st.write("### Foods to Avoid")
+                st.info(row["Note"])
 
-                for item in row["Foods_to_Avoid"].split(";"):
-                    st.write("•", item.strip())
-
-                st.write("### Nutrition Note")
-                st.write(row["Nutritional_Note"])
-
-    # -----------------------------
-    # TAB 2 BMI CALCULATOR
-    # -----------------------------
-
+    # TAB 2 BMI
     with tab2:
-
-        st.header("📊 BMI Calculator")
-
-        weight = st.number_input("Weight (kg)", min_value=1.0)
-
-        height = st.number_input("Height (meters)", min_value=0.5)
+        weight = st.number_input("Weight", min_value=1.0)
+        height = st.number_input("Height", min_value=0.5)
 
         if st.button("Calculate BMI"):
+            bmi = weight / (height**2)
+            st.success(f"BMI: {round(bmi,2)}")
+            bmi_collection.insert_one({"username": st.session_state.username, "bmi": bmi})
 
-            bmi = weight / (height ** 2)
-
-            st.subheader(f"Your BMI: {round(bmi,2)}")
-
-            bmi_collection.insert_one({
-                "username": username,
-                "weight": weight,
-                "height": height,
-                "bmi": bmi
-            })
-
-            st.success("BMI saved")
-
-    # -----------------------------
-    # TAB 3 BMI HISTORY GRAPH
-    # -----------------------------
-
+    # TAB 3 HISTORY
     with tab3:
-
-        st.header("📈 BMI History")
-
-        records = list(bmi_collection.find({"username": username}))
-
+        records = list(bmi_collection.find({"username": st.session_state.username}))
         if records:
-
-            bmi_values = [r["bmi"] for r in records]
-
-            st.write("Past BMI Records")
-
+            vals = [r["bmi"] for r in records]
             st.dataframe(pd.DataFrame(records))
-
             fig, ax = plt.subplots()
-
-            ax.plot(bmi_values, marker='o')
-
-            ax.set_title("BMI Progress")
-
-            ax.set_ylabel("BMI")
-
-            ax.set_xlabel("Record")
-
+            ax.plot(vals)
             st.pyplot(fig)
 
-        else:
-
-            st.info("No BMI history yet")
-
-    # -----------------------------
-    # TAB 4 DIET PLANNER
-    # -----------------------------
-
+    # TAB 4 DIET
     with tab4:
+        goal = st.selectbox("Goal", ["Weight Loss","Muscle Gain","Healthy"])
+        if st.button("Generate"):
+            st.write("Diet plan for", goal)
 
-        st.header("🥗 Diet Planner")
-
-        goal = st.selectbox(
-            "Select your goal",
-            ["Weight Loss", "Muscle Gain", "Healthy Diet"]
-        )
-
-        if st.button("Generate Diet Plan"):
-
-            if goal == "Weight Loss":
-
-                st.write("Breakfast: Oatmeal + Fruits")
-                st.write("Lunch: Brown rice + Vegetables")
-                st.write("Dinner: Soup + Salad")
-
-            elif goal == "Muscle Gain":
-
-                st.write("Breakfast: Eggs + Toast")
-                st.write("Lunch: Chicken + Rice")
-                st.write("Dinner: Fish + Vegetables")
-
-            else:
-
-                st.write("Breakfast: Fruits + Yogurt")
-                st.write("Lunch: Rice + Dal")
-                st.write("Dinner: Chapati + Paneer")
-
-    # -----------------------------
-    # TAB 5 AI CHATBOT
-    # -----------------------------
-
+    # TAB 5 ML
     with tab5:
+        input_dict = {}
+        cols_ui = st.columns(2)
 
-        st.header("🤖 AI Nutrition Chatbot")
+        for i, col in enumerate(columns):
+            with cols_ui[i % 2]:
+                input_dict[col] = st.checkbox(col)
 
-        question = st.text_input("Ask health question")
-
-        if st.button("Ask AI"):
-
-            if question:
-
-                completion = client_ai.chat.completions.create(
-                    model="mistralai/Mistral-7B-Instruct-v0.3",
-                    messages=[
-                        {"role":"system","content":"You are a nutrition expert"},
-                        {"role":"user","content":question}
-                    ],
-                    max_tokens=200
-                )
-
-                answer = completion.choices[0].message.content
-
-                st.write(answer)
-
-
-
+        if st.button("Predict"):
+            input_data = [1 if input_dict[col] else 0 for col in columns]
+            pred = model.predict([input_data])
+            disease_name = le.inverse_transform(pred)
+            st.success(disease_name[0])
