@@ -5,6 +5,7 @@ from pymongo import MongoClient
 import os
 from rapidfuzz import process, fuzz
 import matplotlib.pyplot as plt
+import gdown 
 
 # -----------------------------
 # BACKGROUND
@@ -27,6 +28,9 @@ def set_bg():
 # -----------------------------
 # MODEL
 # -----------------------------
+if not os.path.exists("model.pkl"):
+    url = "https://1drv.ms/u/c/b6927c3fb5126c71/IQD2frYLeQ9GQrDyCpBTOIdiAU5RQ8YGMhwCM106XSFk-_g?e=PQVZDI"
+    gdown.download(url, "model.pkl", quiet=False)
 @st.cache_resource
 def load_model():
     model = pickle.load(open("model.pkl", "rb"))
