@@ -31,6 +31,11 @@ def set_bg():
 if not os.path.exists("model.pkl"):
     url = "https://1drv.ms/u/c/b6927c3fb5126c71/IQD2frYLeQ9GQrDyCpBTOIdiAU5RQ8YGMhwCM106XSFk-_g?e=PQVZDI"
     gdown.download(url, "model.pkl", quiet=False)
+if not os.path.exists("columns.pkl"):
+        gdown.download("https://1drv.ms/u/c/b6927c3fb5126c71/IQCCJpKVQ80nSKSrye44u1xFAUVSxd-xujU8xOtpqproar0?e=zngtQL", "columns.pkl", quiet=False)
+
+if not os.path.exists("label_encoder.pkl"):
+        gdown.download("https://1drv.ms/u/c/b6927c3fb5126c71/IQB3lzWVCQd0RLniD1NNyJEsASb7MrTaH02tqDjYN9Es-JE?e=fshdiN", "label_encoder.pkl", quiet=False)
 @st.cache_resource
 def load_model():
     model = pickle.load(open("model.pkl", "rb"))
