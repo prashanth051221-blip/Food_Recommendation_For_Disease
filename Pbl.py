@@ -29,13 +29,13 @@ def set_bg():
 # MODEL
 # -----------------------------
 if not os.path.exists("model.pkl"):
-    url = "https://1drv.ms/u/c/b6927c3fb5126c71/IQD2frYLeQ9GQrDyCpBTOIdiAU5RQ8YGMhwCM106XSFk-_g?e=PQVZDI"
+    url = "https://drive.google.com/file/d/1YM1m34g0d9FXvmAk8YFTeT9mq0ccuFeN/view?usp=drivesdk"
     gdown.download(url, "model.pkl", quiet=False)
 if not os.path.exists("columns.pkl"):
-        gdown.download("https://1drv.ms/u/c/b6927c3fb5126c71/IQCCJpKVQ80nSKSrye44u1xFAUVSxd-xujU8xOtpqproar0?e=zngtQL", "columns.pkl", quiet=False)
+        gdown.download("https://drive.google.com/file/d/1cO6XOBDWPl3PlOIJ-RVZsa3pHO-qtT46/view?usp=drivesdk", "columns.pkl", quiet=False)
 
 if not os.path.exists("label_encoder.pkl"):
-        gdown.download("https://1drv.ms/u/c/b6927c3fb5126c71/IQB3lzWVCQd0RLniD1NNyJEsASb7MrTaH02tqDjYN9Es-JE?e=fshdiN", "label_encoder.pkl", quiet=False)
+        gdown.download("https://drive.google.com/file/d/10szcH40veSjYbH3N1XX1DNND6t3UW6PH/view?usp=drivesdk", "label_encoder.pkl", quiet=False)
 @st.cache_resource
 def load_model():
     model = pickle.load(open("model.pkl", "rb"))
