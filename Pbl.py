@@ -5,7 +5,7 @@ from pymongo import MongoClient
 import os
 from rapidfuzz import process, fuzz
 import matplotlib.pyplot as plt
-import gdown 
+import gdown
 
 # -----------------------------
 # BACKGROUND
@@ -26,29 +26,39 @@ def set_bg():
     """, unsafe_allow_html=True)
 
 # -----------------------------
-# MODEL
+# DOWNLOAD MODEL FILES (FIXED)
 # -----------------------------
-if not os.path.exists("model.pkl"):
-    url = "https://drive.google.com/file/d/1YM1m34g0d9FXvmAk8YFTeT9mq0ccuFeN/view?usp=drivesdk"
-    gdown.download(url, "model.pkl", quiet=False)
-if not os.path.exists("columns.pkl"):
-        gdown.download("https://drive.google.com/file/d/1cO6XOBDWPl3PlOIJ-RVZsa3pHO-qtT46/view?usp=drivesdk", "columns.pkl", quiet=False)
+def download_files():
+    files = {
+        "model.pkl": "https://drive.google.com/file/d/1YM1m34g0d9FXvmAk8YFTeT9mq0ccuFeN/view?usp=drivesdk",
+        "columns.pkl": "https://drive.google.com/file/d/1cO6XOBDWPl3PlOIJ-RVZsa3pHO-qtT46/view?usp=drivesdk",
+        "label_encoder.pkl": "https://drive.google.com/file/d/10szcH40veSjYbH3N1XX1DNND6t3UW6PH/view?usp=drivesdk"
+    }
 
-if not os.path.exists("label_encoder.pkl"):
-        gdown.download("https://drive.google.com/file/d/10szcH40veSjYbH3N1XX1DNND6t3UW6PH/view?usp=drivesdk", "label_encoder.pkl", quiet=False)
+    for file, fid in files.items():
+        if not os.path.exists(file):
+            url = f"https://drive.google.com/uc?id={fid}"
+            gdown.download(url, file, quiet=False)
+
+# -----------------------------
+# LOAD MODEL
+# -----------------------------
 @st.cache_resource
 def load_model():
+    download_files()
+
     model = pickle.load(open("model.pkl", "rb"))
     columns = pickle.load(open("columns.pkl", "rb"))
     le = pickle.load(open("label_encoder.pkl", "rb"))
+
     return model, columns, le
 
 model, columns, le = load_model()
 
 # -----------------------------
-# MONGO (UNCHANGED)
+# MONGO (FIXED)
 # -----------------------------
-client = MongoClient(st.secrets("MONGO_URI"))
+client = MongoClient(st.secrets["MONGO_URI"])
 db = client["health_app"]
 users_collection = db["users"]
 bmi_collection = db["bmi_records"]
@@ -113,38 +123,14 @@ if st.session_state.logged_in:
         st.rerun()
 
     # -----------------------------
-    # DATASET (FULL)
+    # DATASET
     # -----------------------------
     data = [
         {"Disease":"Common Cold","Description":"Viral infection affecting nose and throat.","Foods_to_Eat":"Warm soup; Ginger tea; Honey; Citrus fruits; Garlic; Herbal tea","Foods_to_Avoid":"Cold drinks; Ice cream; Junk food; Fried food","Note":"Stay hydrated"},
-        {"Disease":"Osteoporosis","Description":"Weak bones.","Foods_to_Eat":"Milk; Cheese; Yogurt; Almonds; Broccoli","Foods_to_Avoid":"Caffeine; Soda","Note":"Calcium needed"},
-        {"Disease":"Bronchitis","Description":"Lung inflammation.","Foods_to_Eat":"Warm fluids; Honey; Ginger","Foods_to_Avoid":"Smoking; Cold drinks","Note":"Avoid pollution"},
-        {"Disease":"Eczema","Description":"Skin inflammation.","Foods_to_Eat":"Fruits; Vegetables; Omega-3","Foods_to_Avoid":"Dairy; Sugar","Note":"Hydrate skin"},
-        {"Disease":"Multiple Sclerosis","Description":"Nerve disease.","Foods_to_Eat":"Healthy fats; Fish","Foods_to_Avoid":"Processed food","Note":"Balanced diet"},
-        {"Disease":"Osteoarthritis","Description":"Joint pain.","Foods_to_Eat":"Fish; Nuts; Vegetables","Foods_to_Avoid":"Fried food","Note":"Maintain weight"},
-        {"Disease":"Hypothyroidism","Description":"Low thyroid.","Foods_to_Eat":"Eggs; Dairy","Foods_to_Avoid":"Soy","Note":"Balanced nutrition"},
-        {"Disease":"Gastroenteritis","Description":"Stomach infection.","Foods_to_Eat":"Rice; Banana; ORS","Foods_to_Avoid":"Spicy food","Note":"Hydration"},
-        {"Disease":"Allergic Rhinitis","Description":"Allergy condition.","Foods_to_Eat":"Fruits; Vitamin C","Foods_to_Avoid":"Dust","Note":"Avoid triggers"},
-        {"Disease":"Depression","Description":"Mental disorder.","Foods_to_Eat":"Fish; Nuts","Foods_to_Avoid":"Alcohol","Note":"Healthy lifestyle"},
-        {"Disease":"Hyperthyroidism","Description":"High thyroid.","Foods_to_Eat":"Vegetables","Foods_to_Avoid":"Iodine excess","Note":"Monitor"},
-        {"Disease":"Migraine","Description":"Headache.","Foods_to_Eat":"Banana; Almonds","Foods_to_Avoid":"Caffeine","Note":"Avoid triggers"},
-        {"Disease":"Psoriasis","Description":"Skin disease.","Foods_to_Eat":"Vegetables","Foods_to_Avoid":"Alcohol","Note":"Reduce inflammation"},
-        {"Disease":"Stroke","Description":"Brain damage.","Foods_to_Eat":"Fruits; Fish","Foods_to_Avoid":"Salt","Note":"Heart diet"},
-        {"Disease":"Hypertension","Description":"High BP.","Foods_to_Eat":"Bananas","Foods_to_Avoid":"Salt","Note":"Low sodium"},
-        {"Disease":"Urinary Tract Infection","Description":"Urinary infection.","Foods_to_Eat":"Water; Juice","Foods_to_Avoid":"Caffeine","Note":"Hydrate"},
-        {"Disease":"Pneumonia","Description":"Lung infection.","Foods_to_Eat":"Soup; Fluids","Foods_to_Avoid":"Cold drinks","Note":"Rest"},
-        {"Disease":"Alzheimer's Disease","Description":"Memory loss.","Foods_to_Eat":"Nuts; Fish","Foods_to_Avoid":"Sugar","Note":"Brain diet"},
-        {"Disease":"Coronary Artery Disease","Description":"Heart blockage.","Foods_to_Eat":"Oats; Fish","Foods_to_Avoid":"Fried food","Note":"Low fat"},
-        {"Disease":"Rheumatoid Arthritis","Description":"Joint disease.","Foods_to_Eat":"Omega-3","Foods_to_Avoid":"Sugar","Note":"Anti-inflammatory"},
-        {"Disease":"Liver Cancer","Description":"Liver cancer.","Foods_to_Eat":"Fruits","Foods_to_Avoid":"Alcohol","Note":"Care needed"},
-        {"Disease":"Parkinson's Disease","Description":"Movement disorder.","Foods_to_Eat":"Fiber","Foods_to_Avoid":"Processed food","Note":"Balanced diet"},
-        {"Disease":"Kidney Disease","Description":"Kidney issue.","Foods_to_Eat":"Low sodium foods","Foods_to_Avoid":"Salt","Note":"Monitor"},
-        {"Disease":"Anxiety Disorders","Description":"Mental issue.","Foods_to_Eat":"Nuts","Foods_to_Avoid":"Caffeine","Note":"Relax"},
-        {"Disease":"Liver Disease","Description":"Liver problem.","Foods_to_Eat":"Vegetables","Foods_to_Avoid":"Alcohol","Note":"Avoid toxins"},
-        {"Disease":"Diabetes","Description":"High sugar.","Foods_to_Eat":"Whole grains","Foods_to_Avoid":"Sugar","Note":"Control"},
-        {"Disease":"Asthma","Description":"Breathing issue.","Foods_to_Eat":"Fruits","Foods_to_Avoid":"Cold drinks","Note":"Avoid triggers"},
-        {"Disease":"Influenza","Description":"Flu.","Foods_to_Eat":"Soup","Foods_to_Avoid":"Cold drinks","Note":"Rest"},
-        {"Disease":"Kidney Cancer","Description":"Kidney cancer.","Foods_to_Eat":"Healthy diet","Foods_to_Avoid":"Processed food","Note":"Medical care"}
+        {"Disease":"Diabetes","Description":"High blood sugar condition.","Foods_to_Eat":"Whole grains; Vegetables; Nuts","Foods_to_Avoid":"Sugar; Soft drinks","Note":"Control glucose"},
+        {"Disease":"Hypertension","Description":"High BP.","Foods_to_Eat":"Fruits; Vegetables","Foods_to_Avoid":"Salt","Note":"Low sodium"},
+        {"Disease":"Asthma","Description":"Breathing issue.","Foods_to_Eat":"Fruits; Vegetables","Foods_to_Avoid":"Cold drinks","Note":"Avoid triggers"},
+        {"Disease":"Migraine","Description":"Headache.","Foods_to_Eat":"Banana; Almonds","Foods_to_Avoid":"Caffeine","Note":"Avoid triggers"}
     ]
 
     df = pd.DataFrame(data)
@@ -154,14 +140,11 @@ if st.session_state.logged_in:
         results = process.extract(q, diseases, scorer=fuzz.token_sort_ratio, limit=5)
         return df[df["Disease"].isin([r[0] for r in results if r[1] > 50])]
 
-    # -----------------------------
-    # TABS
-    # -----------------------------
     tab1, tab2, tab3, tab4, tab5 = st.tabs(
         ["🔎 Search", "📊 BMI", "📈 History", "🥗 Diet", "🧠 Prediction"]
     )
 
-    # TAB 1
+    # SEARCH
     with tab1:
         query = st.text_input("Search Disease")
         if query:
@@ -178,7 +161,7 @@ if st.session_state.logged_in:
 
                 st.info(row["Note"])
 
-    # TAB 2 BMI
+    # BMI
     with tab2:
         weight = st.number_input("Weight", min_value=1.0)
         height = st.number_input("Height", min_value=0.5)
@@ -186,25 +169,33 @@ if st.session_state.logged_in:
         if st.button("Calculate BMI"):
             bmi = weight / (height**2)
             st.success(f"BMI: {round(bmi,2)}")
-            bmi_collection.insert_one({"username": st.session_state.username, "bmi": bmi})
 
-    # TAB 3 HISTORY
+            bmi_collection.insert_one({
+                "username": st.session_state.username,
+                "bmi": bmi
+            })
+
+    # HISTORY
     with tab3:
         records = list(bmi_collection.find({"username": st.session_state.username}))
+
         if records:
             vals = [r["bmi"] for r in records]
             st.dataframe(pd.DataFrame(records))
+
             fig, ax = plt.subplots()
             ax.plot(vals)
             st.pyplot(fig)
+        else:
+            st.info("No history found")
 
-    # TAB 4 DIET
+    # DIET
     with tab4:
         goal = st.selectbox("Goal", ["Weight Loss","Muscle Gain","Healthy"])
-        if st.button("Generate"):
+        if st.button("Generate Diet Plan"):
             st.write("Diet plan for", goal)
 
-    # TAB 5 ML
+    # ML
     with tab5:
         input_dict = {}
         cols_ui = st.columns(2)
@@ -217,4 +208,5 @@ if st.session_state.logged_in:
             input_data = [1 if input_dict[col] else 0 for col in columns]
             pred = model.predict([input_data])
             disease_name = le.inverse_transform(pred)
-            st.success(disease_name[0])
+
+            st.success(f"Predicted: {disease_name[0]}")
