@@ -4,3 +4,4 @@ pymongo==4.16.0
 matplotlib==3.10.8
 huggingface_hub==1.7.2
 rapidfuzz==3.14.3
+gdown==5.2.0
